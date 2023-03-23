@@ -1,0 +1,92 @@
+STACK SEGMENT PARA STACK
+    DB 64 DUP (' ')
+STACK ENDS
+DATA SEGMENT PARA 'DATA'
+
+    TIME_AUX DB 0 ;VAR CHECK TIME CHANGE
+
+    BALL_X DW 0Ah ;X POSITION COLUMN
+    BALL_Y DW 0Ah ;Y POSITION LINE
+    BALL_SIZE DW 04h ;SIZE OF BALL IN PX
+    
+    BALL_VEL_X DW 05h ;X VELOCITY
+    BALL_VEL_Y DW 02h ;Y VELOCITY
+
+DATA ENDS
+CODE SEGMENT PARA 'CODE'
+    MAIN PROC FAR
+    ASSUME CS:CODE,DS:DATA,SS:STACK ;ASSUME AS CODE DATA AND STACK SEGEMENTS REGISTERS
+    PUSH DS ;PUSH TO STACK DS SEGMENT
+    SUB AX,AX ;CLEAN AX REGISTER
+    PUSH AX ;PUSH AX TO STACK
+    MOV AX,DATA ;SAVE ON AX REG CONTENTS OF DS
+    MOV DS,AX ;SAVE ON DS CONTENTS OF AX
+    POP AX ;RELEASE TOP ITEM OF STACK TO AX
+    POP AX ;''
+
+
+        CALL CLEAR_SCREEN
+        
+        CHECK_TIME:
+
+            MOV AH,2Ch ;GET SYSTEM TIME
+            INT 21h 
+
+            CMP DL,TIME_AUX ;COMPARING CURRENT TIME TO PREVIOUS
+            JE CHECK_TIME ;IF SAME CHECK AGAIN
+            MOV TIME_AUX,DL ;UPDATE TIME
+
+            MOV AX,BALL_VEL_X
+            ADD BALL_X,AX
+            MOV AX,BALL_VEL_Y
+            ADD BALL_Y,AX
+            
+            CALL CLEAR_SCREEN
+
+            CALL DRAW_BALL
+
+            JMP CHECK_TIME ;AFTER EVERYTHING CHECK TIME AGAIN
+
+        RET
+    MAIN ENDP
+
+    
+    DRAW_BALL PROC NEAR
+
+        MOV CX,BALL_X ;SET init positon (X)
+        MOV DX,BALL_Y ;SET LINE (Y)
+
+        DRAW_BALL_HORIZONTAL:
+            MOV AH,0Ch ;SET CONFIG TO WRITE A PIXEL
+            MOV AL,0Fh ;SET WHITE COLOR
+            MOV BH,00h ;SET PG NO.
+            INT 10h; EXECUTE
+
+            INC CX ;CX = CX+1
+            MOV AX,CX ;CX - BALL_X > BALL_SIZE (Y-> WE GOTO NEXT LINE ELSE CONTINUE TO NEXT COLUMN)
+            SUB AX,BALL_X
+            CMP AX,BALL_SIZE
+            JNG DRAW_BALL_HORIZONTAL
+
+            MOV CX,BALL_X 
+            INC DX
+
+            MOV AX,DX 
+            SUB AX,BALL_Y
+            CMP AX,BALL_SIZE
+            JNG DRAW_BALL_HORIZONTAL
+
+        RET
+    DRAW_BALL ENDP
+    CLEAR_SCREEN PROC NEAR
+        MOV AH,00h ;set the config for video mode
+        MOV AL,13h ;choose video mode
+        INT 10h ;execute config
+        MOV AH,0Bh ;SET CONFIG 
+        MOV BH,00h ;TO BG COLOR
+        MOV BL,00h ;CHOOSE BLACK AS BG
+        INT 10h ;execute config
+        RET
+    CLEAR_SCREEN ENDP
+CODE ENDS
+END
